@@ -1,1 +1,5 @@
 node_modules/
+
+# SSH Keys
+~.sshid_rsa_personal
+~.sshid_rsa_personal.pub
