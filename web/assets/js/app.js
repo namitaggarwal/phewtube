@@ -11,6 +11,8 @@ let currentSearchQuery = '';
 let currentSortBy = 'latest';
 let videosPerPage = 12;
 let currentVideoPage = 1;
+let currentUser = null;
+let isAuthenticated = false;
 
 // Initialize application when DOM is loaded
 $(document).ready(function() {
@@ -26,6 +28,9 @@ function initializeApp() {
     
     // Initialize sidebar toggle
     initializeSidebar();
+    
+    // Initialize authentication
+    initializeAuth();
     
     // Load initial content
     showHome();
@@ -136,6 +141,15 @@ function handlePopState(event) {
             case 'upload':
                 showUpload(false);
                 break;
+            case 'login':
+                showLogin(false);
+                break;
+            case 'register':
+                showRegister(false);
+                break;
+            case 'admin':
+                showAdminDashboard(false);
+                break;
         }
     }
 }
@@ -162,6 +176,15 @@ function updateHistory(page, data = {}) {
             break;
         case 'upload':
             url = '#/upload';
+            break;
+        case 'login':
+            url = '#/login';
+            break;
+        case 'register':
+            url = '#/register';
+            break;
+        case 'admin':
+            url = '#/admin';
             break;
     }
     
@@ -1449,5 +1472,541 @@ function showChannelAbout() {
                 </div>
             </div>
         `);
+    }
+}
+
+// ===== AUTHENTICATION SYSTEM =====
+
+/**
+ * Initialize authentication system
+ */
+function initializeAuth() {
+    // Check if user is logged in
+    const savedUser = localStorage.getItem('phewTube_currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        isAuthenticated = true;
+        updateAuthUI();
+    } else {
+        updateAuthUI();
+    }
+    
+    // Set up form event listeners
+    $('#loginForm').on('submit', handleLogin);
+    $('#registerForm').on('submit', handleRegister);
+    
+    // Initialize sample users if not exists
+    initializeSampleUsers();
+}
+
+/**
+ * Initialize sample users for demo
+ */
+function initializeSampleUsers() {
+    const users = AuthManager.getAllUsers();
+    if (users.length === 0) {
+        // Create default admin user
+        const adminUser = {
+            id: 'user_admin',
+            firstName: 'Admin',
+            lastName: 'User',
+            username: 'admin',
+            email: 'admin@phewtube.com',
+            password: 'admin123', // In real app, this would be hashed
+            role: 'admin',
+            status: 'active',
+            avatar: 'assets/img/user-avatar.svg',
+            joinedAt: new Date().toISOString(),
+            lastLoginAt: null
+        };
+        
+        // Create sample regular users
+        const sampleUsers = [
+            {
+                id: 'user_001',
+                firstName: 'John',
+                lastName: 'Doe',
+                username: 'johndoe',
+                email: 'john@example.com',
+                password: 'password123',
+                role: 'user',
+                status: 'active',
+                avatar: 'https://via.placeholder.com/48x48/007bff/FFFFFF?text=JD',
+                joinedAt: '2024-01-01T10:00:00Z',
+                lastLoginAt: '2024-01-15T14:30:00Z'
+            },
+            {
+                id: 'user_002',
+                firstName: 'Jane',
+                lastName: 'Smith',
+                username: 'janesmith',
+                email: 'jane@example.com',
+                password: 'password123',
+                role: 'user',
+                status: 'active',
+                avatar: 'https://via.placeholder.com/48x48/28a745/FFFFFF?text=JS',
+                joinedAt: '2024-01-05T15:20:00Z',
+                lastLoginAt: '2024-01-16T09:15:00Z'
+            },
+            {
+                id: 'user_003',
+                firstName: 'Mike',
+                lastName: 'Johnson',
+                username: 'mikej',
+                email: 'mike@example.com',
+                password: 'password123',
+                role: 'user',
+                status: 'inactive',
+                avatar: 'https://via.placeholder.com/48x48/ffc107/FFFFFF?text=MJ',
+                joinedAt: '2023-12-20T11:45:00Z',
+                lastLoginAt: '2024-01-10T16:22:00Z'
+            }
+        ];
+        
+        // Save users
+        AuthManager.saveUser(adminUser);
+        sampleUsers.forEach(user => AuthManager.saveUser(user));
+    }
+}
+
+/**
+ * Handle login form submission
+ */
+function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = $('#loginEmail').val().trim();
+    const password = $('#loginPassword').val().trim();
+    const rememberMe = $('#rememberMe').is(':checked');
+    
+    // Clear previous errors
+    $('#loginError').hide();
+    
+    // Validate inputs
+    if (!email || !password) {
+        showLoginError('Please fill in all fields.');
+        return;
+    }
+    
+    // Attempt login
+    const user = AuthManager.authenticateUser(email, password);
+    
+    if (user) {
+        // Update last login time
+        user.lastLoginAt = new Date().toISOString();
+        AuthManager.updateUser(user);
+        
+        // Set current user
+        currentUser = user;
+        isAuthenticated = true;
+        
+        // Save to localStorage
+        localStorage.setItem('phewTube_currentUser', JSON.stringify(user));
+        
+        if (rememberMe) {
+            localStorage.setItem('phewTube_rememberUser', 'true');
+        }
+        
+        // Update UI
+        updateAuthUI();
+        
+        // Redirect based on role
+        if (user.role === 'admin') {
+            showAdminDashboard();
+        } else {
+            showHome();
+        }
+        
+        showAuthFeedback('Login successful! Welcome back, ' + user.firstName + '!', 'success');
+    } else {
+        showLoginError('Invalid email/username or password.');
+    }
+}
+
+/**
+ * Handle registration form submission
+ */
+function handleRegister(event) {
+    event.preventDefault();
+    
+    const firstName = $('#registerFirstName').val().trim();
+    const lastName = $('#registerLastName').val().trim();
+    const username = $('#registerUsername').val().trim();
+    const email = $('#registerEmail').val().trim();
+    const password = $('#registerPassword').val().trim();
+    const confirmPassword = $('#confirmPassword').val().trim();
+    const agreeTerms = $('#agreeTerms').is(':checked');
+    
+    // Clear previous messages
+    $('#registerError').hide();
+    $('#registerSuccess').hide();
+    
+    // Validate inputs
+    if (!firstName || !lastName || !username || !email || !password || !confirmPassword) {
+        showRegisterError('Please fill in all fields.');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showRegisterError('Passwords do not match.');
+        return;
+    }
+    
+    if (password.length < 8) {
+        showRegisterError('Password must be at least 8 characters long.');
+        return;
+    }
+    
+    if (!agreeTerms) {
+        showRegisterError('Please agree to the Terms of Service and Privacy Policy.');
+        return;
+    }
+    
+    // Check if username or email already exists
+    if (AuthManager.getUserByUsername(username)) {
+        showRegisterError('Username already exists. Please choose a different one.');
+        return;
+    }
+    
+    if (AuthManager.getUserByEmail(email)) {
+        showRegisterError('Email already registered. Please use a different email or sign in.');
+        return;
+    }
+    
+    // Create new user
+    const newUser = {
+        id: 'user_' + Date.now(),
+        firstName,
+        lastName,
+        username,
+        email,
+        password, // In real app, this would be hashed
+        role: 'user',
+        status: 'active',
+        avatar: generateUserAvatar(firstName, lastName),
+        joinedAt: new Date().toISOString(),
+        lastLoginAt: null
+    };
+    
+    // Save user
+    AuthManager.saveUser(newUser);
+    
+    // Show success message
+    showRegisterSuccess('Account created successfully! You can now sign in.');
+    
+    // Clear form
+    $('#registerForm')[0].reset();
+    
+    // Redirect to login after 2 seconds
+    setTimeout(() => {
+        showLogin();
+    }, 2000);
+}
+
+/**
+ * Show login page
+ */
+function showLogin(updateHistory = true) {
+    showPage('loginPage');
+    
+    if (updateHistory) {
+        updateHistory('login');
+    }
+    
+    // Clear form
+    $('#loginForm')[0].reset();
+    $('#loginError').hide();
+    
+    currentPage = 'login';
+}
+
+/**
+ * Show registration page
+ */
+function showRegister(updateHistory = true) {
+    showPage('registerPage');
+    
+    if (updateHistory) {
+        updateHistory('register');
+    }
+    
+    // Clear form
+    $('#registerForm')[0].reset();
+    $('#registerError').hide();
+    $('#registerSuccess').hide();
+    
+    currentPage = 'register';
+}
+
+/**
+ * Show admin dashboard
+ */
+function showAdminDashboard(updateHistory = true) {
+    if (!isAuthenticated || currentUser.role !== 'admin') {
+        showLogin();
+        return;
+    }
+    
+    showPage('adminPage');
+    
+    if (updateHistory) {
+        updateHistory('admin');
+    }
+    
+    // Load admin data
+    loadAdminStats();
+    loadUserList();
+    
+    currentPage = 'admin';
+}
+
+/**
+ * Logout user
+ */
+function logout() {
+    currentUser = null;
+    isAuthenticated = false;
+    
+    // Clear localStorage
+    localStorage.removeItem('phewTube_currentUser');
+    localStorage.removeItem('phewTube_rememberUser');
+    
+    // Update UI
+    updateAuthUI();
+    
+    // Redirect to home
+    showHome();
+    
+    showAuthFeedback('You have been logged out successfully.', 'info');
+}
+
+/**
+ * Admin logout
+ */
+function adminLogout() {
+    logout();
+}
+
+/**
+ * Update authentication UI
+ */
+function updateAuthUI() {
+    if (isAuthenticated && currentUser) {
+        // Show user menu, hide auth buttons
+        $('#userMenu').show();
+        $('#authButtons').hide();
+        
+        // Update user info
+        $('#userDisplayName').text(currentUser.firstName + ' ' + currentUser.lastName);
+        $('#userAvatar').attr('src', currentUser.avatar);
+        
+        // Show admin link if user is admin
+        if (currentUser.role === 'admin') {
+            $('#adminDashboardLink').show();
+        } else {
+            $('#adminDashboardLink').hide();
+        }
+    } else {
+        // Show auth buttons, hide user menu
+        $('#userMenu').hide();
+        $('#authButtons').show();
+        $('#adminDashboardLink').hide();
+    }
+}
+
+/**
+ * Toggle password visibility
+ */
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + 'Icon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+/**
+ * Generate user avatar
+ */
+function generateUserAvatar(firstName, lastName) {
+    const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    const colors = ['007bff', '28a745', 'dc3545', 'ffc107', '17a2b8', '6f42c1', 'fd7e14'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    return `https://via.placeholder.com/48x48/${color}/FFFFFF?text=${initials}`;
+}
+
+/**
+ * Show login error
+ */
+function showLoginError(message) {
+    $('#loginError').text(message).show();
+}
+
+/**
+ * Show register error
+ */
+function showRegisterError(message) {
+    $('#registerError').text(message).show();
+}
+
+/**
+ * Show register success
+ */
+function showRegisterSuccess(message) {
+    $('#registerSuccess').text(message).show();
+}
+
+/**
+ * Show auth feedback
+ */
+function showAuthFeedback(message, type = 'success') {
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    const feedback = $(`
+        <div class="auth-feedback alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(feedback);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        feedback.fadeOut(() => feedback.remove());
+    }, 5000);
+}
+
+/**
+ * Load admin statistics
+ */
+function loadAdminStats() {
+    const users = AuthManager.getAllUsers();
+    const activeUsers = users.filter(user => user.status === 'active');
+    const videos = DataManager.getAllVideos();
+    
+    let totalComments = 0;
+    videos.forEach(video => {
+        totalComments += video.comments.length;
+        video.comments.forEach(comment => {
+            if (comment.replies) {
+                totalComments += comment.replies.length;
+            }
+        });
+    });
+    
+    $('#totalUsers').text(users.length);
+    $('#activeUsers').text(activeUsers.length);
+    $('#totalVideos').text(videos.length);
+    $('#totalComments').text(totalComments);
+}
+
+/**
+ * Load user list for admin
+ */
+function loadUserList() {
+    const users = AuthManager.getAllUsers();
+    const tbody = $('#userTableBody');
+    tbody.empty();
+    
+    users.forEach(user => {
+        const row = createUserRow(user);
+        tbody.append(row);
+    });
+}
+
+/**
+ * Create user table row
+ */
+function createUserRow(user) {
+    const joinedDate = new Date(user.joinedAt).toLocaleDateString();
+    const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never';
+    const statusBadge = user.status === 'active' ? 
+        '<span class="badge bg-success">Active</span>' : 
+        '<span class="badge bg-secondary">Inactive</span>';
+    const roleBadge = user.role === 'admin' ? 
+        '<span class="badge bg-danger">Admin</span>' : 
+        '<span class="badge bg-primary">User</span>';
+    
+    return `
+        <tr>
+            <td><img src="${user.avatar}" alt="${user.username}" class="rounded-circle" width="40" height="40"></td>
+            <td>${user.firstName} ${user.lastName}</td>
+            <td>@${user.username}</td>
+            <td>${user.email}</td>
+            <td>${roleBadge}</td>
+            <td>${statusBadge}</td>
+            <td>${joinedDate}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="editUser('${user.id}')" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-${user.status === 'active' ? 'warning' : 'success'}" 
+                            onclick="toggleUserStatus('${user.id}')" 
+                            title="${user.status === 'active' ? 'Deactivate' : 'Activate'}">
+                        <i class="bi bi-${user.status === 'active' ? 'pause' : 'play'}"></i>
+                    </button>
+                    ${user.role !== 'admin' ? `
+                    <button class="btn btn-outline-danger" onclick="deleteUser('${user.id}')" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Refresh user list
+ */
+function refreshUserList() {
+    loadUserList();
+    loadAdminStats();
+}
+
+/**
+ * Toggle user status
+ */
+function toggleUserStatus(userId) {
+    const user = AuthManager.getUserById(userId);
+    if (user && user.role !== 'admin') {
+        user.status = user.status === 'active' ? 'inactive' : 'active';
+        AuthManager.updateUser(user);
+        loadUserList();
+        loadAdminStats();
+        showAuthFeedback(`User ${user.username} has been ${user.status === 'active' ? 'activated' : 'deactivated'}.`, 'success');
+    }
+}
+
+/**
+ * Delete user
+ */
+function deleteUser(userId) {
+    const user = AuthManager.getUserById(userId);
+    if (user && user.role !== 'admin') {
+        if (confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
+            AuthManager.deleteUser(userId);
+            loadUserList();
+            loadAdminStats();
+            showAuthFeedback(`User ${user.username} has been deleted.`, 'success');
+        }
+    }
+}
+
+/**
+ * Edit user (placeholder)
+ */
+function editUser(userId) {
+    const user = AuthManager.getUserById(userId);
+    if (user) {
+        alert(`Edit user functionality would open a modal for: ${user.firstName} ${user.lastName}`);
+        // In a real implementation, this would open a modal with user edit form
     }
 }

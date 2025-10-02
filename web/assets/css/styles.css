@@ -790,3 +790,235 @@ body {
 .sidebar::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* ===== AUTHENTICATION PAGES ===== */
+#loginPage, #registerPage {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+#loginPage .card, #registerPage .card {
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.auth-logo {
+    color: var(--yt-red);
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.form-control:focus {
+    border-color: var(--yt-red);
+    box-shadow: 0 0 0 0.2rem rgba(255, 0, 0, 0.25);
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, var(--yt-red), var(--yt-dark-red));
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+}
+
+.btn-outline-primary, .btn-primary {
+    border-radius: 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover, .btn-primary:hover {
+    transform: translateY(-1px);
+}
+
+/* Password visibility toggle */
+.input-group .btn {
+    border-left: none;
+    background: transparent;
+}
+
+.input-group .form-control:focus + .btn {
+    border-color: var(--yt-red);
+}
+
+/* Auth buttons in header */
+#authButtons .btn {
+    border-radius: 20px;
+    font-size: 14px;
+    padding: 8px 16px;
+    font-weight: 500;
+}
+
+/* ===== ADMIN DASHBOARD ===== */
+#adminPage {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+.admin-stats .card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease;
+}
+
+.admin-stats .card:hover {
+    transform: translateY(-5px);
+}
+
+.admin-stats .card-body {
+    padding: 2rem;
+}
+
+.admin-stats h4 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.admin-stats .bi {
+    opacity: 0.7;
+}
+
+/* User management table */
+.table-responsive {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+    padding: 1rem 0.75rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+.btn-group-sm .btn {
+    padding: 0.375rem 0.5rem;
+    border-radius: 6px;
+}
+
+/* Admin header */
+.admin-header {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Search input in admin */
+#userSearch {
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 1rem;
+}
+
+#userSearch:focus {
+    border-color: var(--yt-red);
+    box-shadow: 0 0 0 0.2rem rgba(255, 0, 0, 0.25);
+}
+
+/* Auth feedback notifications */
+.auth-feedback {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.auth-feedback.alert-success {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+}
+
+.auth-feedback.alert-danger {
+    background: linear-gradient(45deg, #dc3545, #e74c3c);
+    color: white;
+}
+
+.auth-feedback.alert-info {
+    background: linear-gradient(45deg, #17a2b8, #20c997);
+    color: white;
+}
+
+/* Responsive auth pages */
+@media (max-width: 768px) {
+    #loginPage .card, #registerPage .card {
+        margin: 1rem;
+        border-radius: 10px;
+    }
+    
+    #loginPage .card-body, #registerPage .card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .auth-logo {
+        font-size: 2rem;
+    }
+    
+    #authButtons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    #authButtons .btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .admin-stats .card-body {
+        padding: 1.5rem;
+    }
+    
+    .admin-stats h4 {
+        font-size: 2rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.375rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.375rem 0.5rem;
+    }
+}

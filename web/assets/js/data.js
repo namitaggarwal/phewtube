@@ -600,7 +600,108 @@ const DataManager = {
     }
 };
 
+// ===== AUTHENTICATION MANAGER =====
+
+const AuthManager = {
+    // Get all users
+    getAllUsers() {
+        return JSON.parse(localStorage.getItem('phewTube_users') || '[]');
+    },
+
+    // Get user by ID
+    getUserById(id) {
+        const users = this.getAllUsers();
+        return users.find(user => user.id === id);
+    },
+
+    // Get user by username
+    getUserByUsername(username) {
+        const users = this.getAllUsers();
+        return users.find(user => user.username.toLowerCase() === username.toLowerCase());
+    },
+
+    // Get user by email
+    getUserByEmail(email) {
+        const users = this.getAllUsers();
+        return users.find(user => user.email.toLowerCase() === email.toLowerCase());
+    },
+
+    // Authenticate user
+    authenticateUser(emailOrUsername, password) {
+        const users = this.getAllUsers();
+        return users.find(user => 
+            (user.email.toLowerCase() === emailOrUsername.toLowerCase() || 
+             user.username.toLowerCase() === emailOrUsername.toLowerCase()) &&
+            user.password === password &&
+            user.status === 'active'
+        );
+    },
+
+    // Save user
+    saveUser(user) {
+        const users = this.getAllUsers();
+        const existingIndex = users.findIndex(u => u.id === user.id);
+        
+        if (existingIndex !== -1) {
+            users[existingIndex] = user;
+        } else {
+            users.push(user);
+        }
+        
+        localStorage.setItem('phewTube_users', JSON.stringify(users));
+        return user;
+    },
+
+    // Update user
+    updateUser(user) {
+        return this.saveUser(user);
+    },
+
+    // Delete user
+    deleteUser(userId) {
+        const users = this.getAllUsers();
+        const filteredUsers = users.filter(user => user.id !== userId);
+        localStorage.setItem('phewTube_users', JSON.stringify(filteredUsers));
+        return true;
+    },
+
+    // Check if username exists
+    usernameExists(username) {
+        return this.getUserByUsername(username) !== undefined;
+    },
+
+    // Check if email exists
+    emailExists(email) {
+        return this.getUserByEmail(email) !== undefined;
+    },
+
+    // Get users by role
+    getUsersByRole(role) {
+        const users = this.getAllUsers();
+        return users.filter(user => user.role === role);
+    },
+
+    // Get active users
+    getActiveUsers() {
+        const users = this.getAllUsers();
+        return users.filter(user => user.status === 'active');
+    },
+
+    // Get user statistics
+    getUserStats() {
+        const users = this.getAllUsers();
+        return {
+            total: users.length,
+            active: users.filter(user => user.status === 'active').length,
+            inactive: users.filter(user => user.status === 'inactive').length,
+            admins: users.filter(user => user.role === 'admin').length,
+            regularUsers: users.filter(user => user.role === 'user').length
+        };
+    }
+};
+
 // Export for use in other scripts
 window.DataManager = DataManager;
+window.AuthManager = AuthManager;
 window.SAMPLE_VIDEOS = SAMPLE_VIDEOS;
 window.CHANNELS = CHANNELS;
