@@ -213,7 +213,19 @@
 
                                 <!-- Comments Section -->
                                 <div class="comments-section mt-4">
-                                    <h5 class="mb-3"><span id="commentCount">0</span> Comments</h5>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0"><span id="commentCount">0</span> Comments</h5>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-sort-down me-1"></i>Sort by
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" onclick="sortComments('newest')">Newest first</a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="sortComments('oldest')">Oldest first</a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="sortComments('popular')">Most liked</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                     
                                     <!-- Add Comment -->
                                     <div class="add-comment mb-4">

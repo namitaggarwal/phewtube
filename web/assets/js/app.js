@@ -382,8 +382,26 @@ function loadComments(comments) {
     const container = $('#commentsList');
     const commentCount = $('#commentCount');
     
-    commentCount.text(comments.length);
+    // Calculate total comments including replies
+    let totalComments = comments.length;
+    comments.forEach(comment => {
+        if (comment.replies && comment.replies.length > 0) {
+            totalComments += comment.replies.length;
+        }
+    });
+    
+    commentCount.text(totalComments);
     container.empty();
+    
+    if (comments.length === 0) {
+        container.html(`
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-chat-dots fs-1 mb-3"></i>
+                <p>No comments yet. Be the first to comment!</p>
+            </div>
+        `);
+        return;
+    }
     
     comments.forEach(comment => {
         const commentHtml = createCommentHtml(comment);
@@ -396,22 +414,32 @@ function loadComments(comments) {
  */
 function createCommentHtml(comment) {
     const timeAgo = DataManager.formatTimeAgo(comment.timestamp);
+    const isLiked = isCommentLiked(comment.id);
+    const isDisliked = isCommentDisliked(comment.id);
+    
     let repliesHtml = '';
     
     if (comment.replies && comment.replies.length > 0) {
-        repliesHtml = '<div class="ms-5 mt-2">';
+        repliesHtml = '<div class="replies-container ms-4 mt-2">';
         comment.replies.forEach(reply => {
             const replyTimeAgo = DataManager.formatTimeAgo(reply.timestamp);
+            const replyIsLiked = isCommentLiked(reply.id);
+            const replyIsDisliked = isCommentDisliked(reply.id);
+            
             repliesHtml += `
-                <div class="comment mb-2">
+                <div class="comment reply mb-2" data-comment-id="${reply.id}">
                     <img src="${reply.avatar}" alt="${reply.author}" class="comment-avatar">
                     <div class="comment-content">
-                        <div class="comment-author">${reply.author}</div>
+                        <div class="comment-author">${reply.author} • ${replyTimeAgo}</div>
                         <div class="comment-text">${reply.text}</div>
                         <div class="comment-actions">
-                            <button><i class="bi bi-hand-thumbs-up me-1"></i>${reply.likes || 0}</button>
-                            <button><i class="bi bi-hand-thumbs-down"></i></button>
-                            <button>Reply</button>
+                            <button class="comment-like-btn ${replyIsLiked ? 'liked' : ''}" onclick="toggleCommentLike('${reply.id}')">
+                                <i class="bi bi-hand-thumbs-up me-1"></i><span class="like-count">${reply.likes || 0}</span>
+                            </button>
+                            <button class="comment-dislike-btn ${replyIsDisliked ? 'disliked' : ''}" onclick="toggleCommentDislike('${reply.id}')">
+                                <i class="bi bi-hand-thumbs-down"></i>
+                            </button>
+                            <button onclick="showReplyForm('${comment.id}')">Reply</button>
                         </div>
                     </div>
                 </div>
@@ -421,15 +449,34 @@ function createCommentHtml(comment) {
     }
     
     return `
-        <div class="comment">
+        <div class="comment main-comment mb-3" data-comment-id="${comment.id}">
             <img src="${comment.avatar}" alt="${comment.author}" class="comment-avatar">
             <div class="comment-content">
                 <div class="comment-author">${comment.author} • ${timeAgo}</div>
                 <div class="comment-text">${comment.text}</div>
                 <div class="comment-actions">
-                    <button><i class="bi bi-hand-thumbs-up me-1"></i>${comment.likes}</button>
-                    <button><i class="bi bi-hand-thumbs-down"></i></button>
-                    <button>Reply</button>
+                    <button class="comment-like-btn ${isLiked ? 'liked' : ''}" onclick="toggleCommentLike('${comment.id}')">
+                        <i class="bi bi-hand-thumbs-up me-1"></i><span class="like-count">${comment.likes}</span>
+                    </button>
+                    <button class="comment-dislike-btn ${isDisliked ? 'disliked' : ''}" onclick="toggleCommentDislike('${comment.id}')">
+                        <i class="bi bi-hand-thumbs-down"></i>
+                    </button>
+                    <button onclick="showReplyForm('${comment.id}')">Reply</button>
+                    <button onclick="toggleReplies('${comment.id}')" class="toggle-replies-btn" ${comment.replies && comment.replies.length > 0 ? '' : 'style="display: none;"'}>
+                        <i class="bi bi-chevron-down"></i> ${comment.replies ? comment.replies.length : 0} replies
+                    </button>
+                </div>
+                <div class="reply-form-container" id="replyForm-${comment.id}" style="display: none;">
+                    <div class="d-flex mt-3">
+                        <img src="assets/img/user-avatar.svg" alt="You" class="rounded-circle me-3" width="32" height="32">
+                        <div class="flex-grow-1">
+                            <textarea class="form-control reply-input" rows="2" placeholder="Add a reply..." id="replyInput-${comment.id}"></textarea>
+                            <div class="mt-2">
+                                <button class="btn btn-primary btn-sm" onclick="addReply('${comment.id}')">Reply</button>
+                                <button class="btn btn-link btn-sm" onclick="cancelReply('${comment.id}')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ${repliesHtml}
             </div>
@@ -444,7 +491,10 @@ function addComment() {
     const commentInput = $('#commentInput');
     const commentText = commentInput.val().trim();
     
-    if (!commentText) return;
+    if (!commentText) {
+        alert('Please enter a comment before posting.');
+        return;
+    }
     
     const video = DataManager.getVideoById(currentVideoId);
     if (!video) return;
@@ -452,7 +502,7 @@ function addComment() {
     const newComment = {
         id: 'com_' + Date.now(),
         author: 'You',
-        avatar: 'assets/img/user-avatar.jpg',
+        avatar: 'assets/img/user-avatar.svg',
         text: commentText,
         timestamp: new Date().toISOString(),
         likes: 0,
@@ -462,6 +512,9 @@ function addComment() {
     video.comments.unshift(newComment);
     loadComments(video.comments);
     commentInput.val('');
+    
+    // Show success feedback
+    showCommentFeedback('Comment posted successfully!');
 }
 
 /**
@@ -469,6 +522,303 @@ function addComment() {
  */
 function cancelComment() {
     $('#commentInput').val('');
+}
+
+/**
+ * Add reply to a comment
+ */
+function addReply(commentId) {
+    const replyInput = $(`#replyInput-${commentId}`);
+    const replyText = replyInput.val().trim();
+    
+    if (!replyText) {
+        alert('Please enter a reply before posting.');
+        return;
+    }
+    
+    const video = DataManager.getVideoById(currentVideoId);
+    if (!video) return;
+    
+    const comment = findCommentById(video.comments, commentId);
+    if (!comment) return;
+    
+    const newReply = {
+        id: 'rep_' + Date.now(),
+        author: 'You',
+        avatar: 'assets/img/user-avatar.svg',
+        text: replyText,
+        timestamp: new Date().toISOString(),
+        likes: 0
+    };
+    
+    if (!comment.replies) {
+        comment.replies = [];
+    }
+    
+    comment.replies.push(newReply);
+    loadComments(video.comments);
+    
+    // Show success feedback
+    showCommentFeedback('Reply posted successfully!');
+}
+
+/**
+ * Cancel reply
+ */
+function cancelReply(commentId) {
+    $(`#replyForm-${commentId}`).hide();
+    $(`#replyInput-${commentId}`).val('');
+}
+
+/**
+ * Show reply form
+ */
+function showReplyForm(commentId) {
+    // Hide all other reply forms
+    $('.reply-form-container').hide();
+    
+    // Show the specific reply form
+    $(`#replyForm-${commentId}`).show();
+    $(`#replyInput-${commentId}`).focus();
+}
+
+/**
+ * Toggle replies visibility
+ */
+function toggleReplies(commentId) {
+    const repliesContainer = $(`.comment[data-comment-id="${commentId}"] .replies-container`);
+    const toggleBtn = $(`.comment[data-comment-id="${commentId}"] .toggle-replies-btn`);
+    const icon = toggleBtn.find('i');
+    
+    if (repliesContainer.is(':visible')) {
+        repliesContainer.hide();
+        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+    } else {
+        repliesContainer.show();
+        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+    }
+}
+
+/**
+ * Toggle comment like
+ */
+function toggleCommentLike(commentId) {
+    const video = DataManager.getVideoById(currentVideoId);
+    if (!video) return;
+    
+    const comment = findCommentById(video.comments, commentId, true);
+    if (!comment) return;
+    
+    const likedComments = getCommentLikes();
+    const dislikedComments = getCommentDislikes();
+    
+    const isCurrentlyLiked = likedComments.includes(commentId);
+    const isCurrentlyDisliked = dislikedComments.includes(commentId);
+    
+    if (isCurrentlyLiked) {
+        // Remove like
+        const index = likedComments.indexOf(commentId);
+        likedComments.splice(index, 1);
+        comment.likes = Math.max(0, comment.likes - 1);
+    } else {
+        // Add like
+        likedComments.push(commentId);
+        comment.likes = (comment.likes || 0) + 1;
+        
+        // Remove dislike if exists
+        if (isCurrentlyDisliked) {
+            const dislikeIndex = dislikedComments.indexOf(commentId);
+            dislikedComments.splice(dislikeIndex, 1);
+        }
+    }
+    
+    setCommentLikes(likedComments);
+    setCommentDislikes(dislikedComments);
+    
+    // Update UI
+    updateCommentLikeUI(commentId, comment.likes);
+}
+
+/**
+ * Toggle comment dislike
+ */
+function toggleCommentDislike(commentId) {
+    const likedComments = getCommentLikes();
+    const dislikedComments = getCommentDislikes();
+    
+    const isCurrentlyLiked = likedComments.includes(commentId);
+    const isCurrentlyDisliked = dislikedComments.includes(commentId);
+    
+    if (isCurrentlyDisliked) {
+        // Remove dislike
+        const index = dislikedComments.indexOf(commentId);
+        dislikedComments.splice(index, 1);
+    } else {
+        // Add dislike
+        dislikedComments.push(commentId);
+        
+        // Remove like if exists
+        if (isCurrentlyLiked) {
+            const likeIndex = likedComments.indexOf(commentId);
+            likedComments.splice(likeIndex, 1);
+            
+            const video = DataManager.getVideoById(currentVideoId);
+            const comment = findCommentById(video.comments, commentId, true);
+            if (comment) {
+                comment.likes = Math.max(0, comment.likes - 1);
+                updateCommentLikeUI(commentId, comment.likes);
+            }
+        }
+    }
+    
+    setCommentLikes(likedComments);
+    setCommentDislikes(dislikedComments);
+    
+    // Update UI
+    updateCommentDislikeUI(commentId);
+}
+
+/**
+ * Helper functions for comment management
+ */
+function findCommentById(comments, commentId, includeReplies = false) {
+    for (let comment of comments) {
+        if (comment.id === commentId) {
+            return comment;
+        }
+        if (includeReplies && comment.replies) {
+            for (let reply of comment.replies) {
+                if (reply.id === commentId) {
+                    return reply;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function getCommentLikes() {
+    return JSON.parse(localStorage.getItem('phewTube_comment_likes') || '[]');
+}
+
+function setCommentLikes(likes) {
+    localStorage.setItem('phewTube_comment_likes', JSON.stringify(likes));
+}
+
+function getCommentDislikes() {
+    return JSON.parse(localStorage.getItem('phewTube_comment_dislikes') || '[]');
+}
+
+function setCommentDislikes(dislikes) {
+    localStorage.setItem('phewTube_comment_dislikes', JSON.stringify(dislikes));
+}
+
+function isCommentLiked(commentId) {
+    return getCommentLikes().includes(commentId);
+}
+
+function isCommentDisliked(commentId) {
+    return getCommentDislikes().includes(commentId);
+}
+
+function updateCommentLikeUI(commentId, likeCount) {
+    const commentElement = $(`.comment[data-comment-id="${commentId}"]`);
+    const likeBtn = commentElement.find('.comment-like-btn');
+    const dislikeBtn = commentElement.find('.comment-dislike-btn');
+    const likeCountSpan = likeBtn.find('.like-count');
+    
+    // Update like button state
+    if (isCommentLiked(commentId)) {
+        likeBtn.addClass('liked');
+    } else {
+        likeBtn.removeClass('liked');
+    }
+    
+    // Update dislike button state
+    if (isCommentDisliked(commentId)) {
+        dislikeBtn.addClass('disliked');
+    } else {
+        dislikeBtn.removeClass('disliked');
+    }
+    
+    // Update like count
+    likeCountSpan.text(likeCount);
+}
+
+function updateCommentDislikeUI(commentId) {
+    const commentElement = $(`.comment[data-comment-id="${commentId}"]`);
+    const likeBtn = commentElement.find('.comment-like-btn');
+    const dislikeBtn = commentElement.find('.comment-dislike-btn');
+    
+    // Update like button state
+    if (isCommentLiked(commentId)) {
+        likeBtn.addClass('liked');
+    } else {
+        likeBtn.removeClass('liked');
+    }
+    
+    // Update dislike button state
+    if (isCommentDisliked(commentId)) {
+        dislikeBtn.addClass('disliked');
+    } else {
+        dislikeBtn.removeClass('disliked');
+    }
+}
+
+function showCommentFeedback(message) {
+    // Create and show a temporary feedback message
+    const feedback = $(`
+        <div class="comment-feedback alert alert-success alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('.comments-section').prepend(feedback);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        feedback.fadeOut(() => feedback.remove());
+    }, 3000);
+}
+
+/**
+ * Sort comments
+ */
+function sortComments(sortBy) {
+    const video = DataManager.getVideoById(currentVideoId);
+    if (!video || !video.comments) return;
+    
+    let sortedComments = [...video.comments];
+    
+    switch (sortBy) {
+        case 'newest':
+            sortedComments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            break;
+        case 'oldest':
+            sortedComments.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            break;
+        case 'popular':
+            sortedComments.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+            break;
+        default:
+            break;
+    }
+    
+    // Update the video's comments order temporarily for display
+    const originalComments = video.comments;
+    video.comments = sortedComments;
+    loadComments(video.comments);
+    video.comments = originalComments; // Restore original order
+    
+    // Update dropdown text
+    const sortText = {
+        'newest': 'Newest first',
+        'oldest': 'Oldest first', 
+        'popular': 'Most liked'
+    };
+    
+    $('.comments-section .dropdown-toggle').html(`<i class="bi bi-sort-down me-1"></i>${sortText[sortBy]}`);
 }
 
 /**
