@@ -1,14 +1,404 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>phewtube</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-  </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>phewTube</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="assets/css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Header - matches YouTube layout from screenshot -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+        <div class="container-fluid">
+            <!-- Left side: Menu button and Logo -->
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link p-2 me-3" id="sidebar-toggle" type="button">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <a class="navbar-brand d-flex align-items-center" href="#" onclick="showHome()">
+                    <i class="bi bi-play-circle-fill text-danger me-2 fs-3"></i>
+                    <span class="fw-bold">phewTube</span>
+                </a>
+            </div>
 
+            <!-- Center: Search bar -->
+            <div class="flex-grow-1 mx-4 d-none d-md-block">
+                <div class="search-container position-relative">
+                    <div class="input-group">
+                        <input type="text" class="form-control search-input" id="searchInput" placeholder="Search">
+                        <button class="btn btn-outline-secondary search-btn" type="button" onclick="performSearch()">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Right side: User menu -->
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link p-2 d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSearch">
+                    <i class="bi bi-search"></i>
+                </button>
+                <button class="btn btn-link p-2 me-2" onclick="showUpload()">
+                    <i class="bi bi-plus-circle fs-5"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-link p-2" type="button" data-bs-toggle="dropdown">
+                        <img src="assets/img/user-avatar.svg" alt="User" class="rounded-circle" width="32" height="32">
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Your channel</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Sign out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile search collapse -->
+        <div class="collapse" id="mobileSearch">
+            <div class="container-fluid pt-2 pb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="mobileSearchInput" placeholder="Search">
+                    <button class="btn btn-outline-secondary" type="button" onclick="performMobileSearch()">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="d-flex">
+        <!-- Sidebar - matches YouTube navigation from screenshot -->
+        <nav class="sidebar bg-white border-end" id="sidebar">
+            <div class="sidebar-content">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="showHome()">
+                            <i class="bi bi-house-door me-3"></i>
+                            <span class="sidebar-text">Home</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showTrending()">
+                            <i class="bi bi-fire me-3"></i>
+                            <span class="sidebar-text">Trending</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSubscriptions()">
+                            <i class="bi bi-collection-play me-3"></i>
+                            <span class="sidebar-text">Subscriptions</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <hr>
+
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showLibrary()">
+                            <i class="bi bi-collection me-3"></i>
+                            <span class="sidebar-text">Library</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showHistory()">
+                            <i class="bi bi-clock-history me-3"></i>
+                            <span class="sidebar-text">History</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showWatchLater()">
+                            <i class="bi bi-clock me-3"></i>
+                            <span class="sidebar-text">Watch later</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showLikedVideos()">
+                            <i class="bi bi-hand-thumbs-up me-3"></i>
+                            <span class="sidebar-text">Liked videos</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content flex-grow-1">
+            <!-- Home Page - Video grid matching screenshot layout -->
+            <div id="homePage" class="page active">
+                <div class="container-fluid py-3">
+                    <!-- Sort/Filter Bar -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm active" onclick="sortVideos('latest')">Latest</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sortVideos('popular')">Most viewed</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sortVideos('trending')">Trending</button>
+                        </div>
+                    </div>
+
+                    <!-- Video Grid -->
+                    <div class="row g-3" id="videoGrid">
+                        <!-- Videos will be loaded here by JavaScript -->
+                    </div>
+
+                    <!-- Load More Button -->
+                    <div class="text-center mt-4">
+                        <button class="btn btn-outline-primary" id="loadMoreBtn" onclick="loadMoreVideos()">
+                            Load More Videos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watch Page -->
+            <div id="watchPage" class="page" style="display: none;">
+                <div class="container-fluid py-3">
+                    <div class="row">
+                        <!-- Video Player Column -->
+                        <div class="col-lg-8">
+                            <div class="video-player-container mb-3">
+                                <video id="videoPlayer" class="w-100" controls poster="">
+                                    <source src="" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+
+                            <!-- Video Info -->
+                            <div class="video-info">
+                                <h1 class="video-title mb-2" id="videoTitle"></h1>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="video-stats text-muted" id="videoStats"></div>
+                                    <div class="video-actions">
+                                        <button class="btn btn-outline-secondary btn-sm me-2" id="likeBtn" onclick="toggleLike()">
+                                            <i class="bi bi-hand-thumbs-up me-1"></i>
+                                            <span id="likeCount">0</span>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm me-2" id="dislikeBtn" onclick="toggleDislike()">
+                                            <i class="bi bi-hand-thumbs-down me-1"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm me-2">
+                                            <i class="bi bi-share me-1"></i>Share
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-bookmark me-1"></i>Save
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Channel Info -->
+                                <div class="channel-info d-flex align-items-center mb-4">
+                                    <img id="channelAvatar" src="" alt="Channel" class="rounded-circle me-3" width="48" height="48">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0" id="channelName"></h6>
+                                        <small class="text-muted" id="channelSubs"></small>
+                                    </div>
+                                    <button class="btn btn-danger" id="subscribeBtn" onclick="toggleSubscribe()">
+                                        Subscribe
+                                    </button>
+                                </div>
+
+                                <!-- Video Description -->
+                                <div class="video-description">
+                                    <p id="videoDescription"></p>
+                                </div>
+
+                                <!-- Comments Section -->
+                                <div class="comments-section mt-4">
+                                    <h5 class="mb-3"><span id="commentCount">0</span> Comments</h5>
+                                    
+                                    <!-- Add Comment -->
+                                    <div class="add-comment mb-4">
+                                        <div class="d-flex">
+                                            <img src="assets/img/user-avatar.svg" alt="You" class="rounded-circle me-3" width="40" height="40">
+                                            <div class="flex-grow-1">
+                                                <textarea class="form-control" id="commentInput" rows="2" placeholder="Add a public comment..."></textarea>
+                                                <div class="mt-2">
+                                                    <button class="btn btn-primary btn-sm" onclick="addComment()">Comment</button>
+                                                    <button class="btn btn-link btn-sm" onclick="cancelComment()">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Comments List -->
+                                    <div id="commentsList">
+                                        <!-- Comments will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggested Videos Column -->
+                        <div class="col-lg-4">
+                            <div class="suggested-videos">
+                                <h6 class="mb-3">Up next</h6>
+                                <div id="suggestedVideosList">
+                                    <!-- Suggested videos will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results Page -->
+            <div id="searchPage" class="page" style="display: none;">
+                <div class="container-fluid py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 id="searchResultsTitle">Search Results</h4>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" onclick="toggleSearchView('list')">
+                                <i class="bi bi-list"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleSearchView('grid')">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="searchResults">
+                        <!-- Search results will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channel Page -->
+            <div id="channelPage" class="page" style="display: none;">
+                <div class="container-fluid">
+                    <!-- Channel Header -->
+                    <div class="channel-header mb-4">
+                        <div class="channel-banner bg-gradient" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                        <div class="channel-info-header p-4">
+                            <div class="d-flex align-items-center">
+                                <img id="channelPageAvatar" src="" alt="Channel" class="rounded-circle me-4" width="80" height="80">
+                                <div class="flex-grow-1">
+                                    <h2 id="channelPageName" class="mb-1"></h2>
+                                    <p class="text-muted mb-2" id="channelPageSubs"></p>
+                                    <p class="mb-0" id="channelPageDescription"></p>
+                                </div>
+                                <button class="btn btn-danger" id="channelPageSubscribeBtn" onclick="toggleChannelSubscribe()">
+                                    Subscribe
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Channel Videos -->
+                    <div class="channel-videos">
+                        <ul class="nav nav-tabs mb-3">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#" onclick="showChannelVideos()">Videos</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" onclick="showChannelPlaylists()">Playlists</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" onclick="showChannelAbout()">About</a>
+                            </li>
+                        </ul>
+
+                        <div class="row g-3" id="channelVideosList">
+                            <!-- Channel videos will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Page -->
+            <div id="uploadPage" class="page" style="display: none;">
+                <div class="container py-4">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="mb-0">Upload Video</h4>
+                                </div>
+                                <div class="card-body">
+                                    <form id="uploadForm">
+                                        <!-- File Upload Area -->
+                                        <div class="upload-area border-2 border-dashed rounded p-5 text-center mb-4" id="uploadArea">
+                                            <i class="bi bi-cloud-upload fs-1 text-muted mb-3"></i>
+                                            <h5>Drag and drop video files to upload</h5>
+                                            <p class="text-muted">Or click to select files</p>
+                                            <input type="file" class="d-none" id="videoFileInput" accept="video/*" onchange="handleFileSelect(event)">
+                                            <button type="button" class="btn btn-primary" onclick="document.getElementById('videoFileInput').click()">
+                                                Select Files
+                                            </button>
+                                        </div>
+
+                                        <!-- Upload Progress -->
+                                        <div class="upload-progress d-none" id="uploadProgress">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-file-earmark-play me-2"></i>
+                                                <span id="uploadFileName"></span>
+                                            </div>
+                                            <div class="progress mb-2">
+                                                <div class="progress-bar" id="uploadProgressBar" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                            <small class="text-muted" id="uploadStatus">Uploading...</small>
+                                        </div>
+
+                                        <!-- Video Details -->
+                                        <div class="video-details d-none" id="videoDetails">
+                                            <div class="mb-3">
+                                                <label for="videoTitle" class="form-label">Title</label>
+                                                <input type="text" class="form-control" id="videoTitleInput" placeholder="Enter video title" required>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="videoDescription" class="form-label">Description</label>
+                                                <textarea class="form-control" id="videoDescriptionInput" rows="4" placeholder="Tell viewers about your video"></textarea>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="videoThumbnail" class="form-label">Thumbnail</label>
+                                                <input type="file" class="form-control" id="videoThumbnailInput" accept="image/*">
+                                                <small class="text-muted">Select or upload a picture that shows what's in your video</small>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="videoCategory" class="form-label">Category</label>
+                                                <select class="form-select" id="videoCategoryInput">
+                                                    <option value="">Select category</option>
+                                                    <option value="music">Music</option>
+                                                    <option value="gaming">Gaming</option>
+                                                    <option value="education">Education</option>
+                                                    <option value="entertainment">Entertainment</option>
+                                                    <option value="technology">Technology</option>
+                                                    <option value="sports">Sports</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-end">
+                                                <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelUpload()">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Publish</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="assets/js/data.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
